@@ -5,16 +5,22 @@ const swaggerUI=require('swagger-ui-express');
 const mysql=require('mysql');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+require("dotenv").config();
 
 const app = express();
-const PORT=process.env.PORT||9000;
+const sapp=express();
+const PORT=process.env.PORT || 8081;
+const SPORT=8080;
+const HOST= process.env.HOST || 'localhost';
+const DB_USER= process.env.DB_USER || 'root';
+const DB_PASS= process.env.DB_PASS || '' ;
+const DB_DATABASE='xmeme';
+const DB_PORT=process.env.DB_PORT || '3306';
+var path=require('path');
+
 app.set(PORT);
-
-var http = require('http');
-var fs = require('fs');
-
+sapp.set(SPORT);
 console.log("start!!");
-
 
 const swaggerOptions={
    swaggerDefinition:{
@@ -73,15 +79,21 @@ const swaggerOptions={
                      }
                  },
                  "produces": [
-                     "text/plain"
+                    "application/json"
                  ],
                  "responses": {
-                     "201": {
-                         "description": "Created",
-                     },
-                     "500": {
+                    "200": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/id"
+                        }
+                    },
+                    "400" :{
+                        "description" : "Bad Request",
+                    },
+                    "500": {
                          "description": "Server Error"
-                     }
+                    }
                  }
              }
          },
@@ -143,8 +155,11 @@ const swaggerOptions={
                    "text/plain"
                ],
                "responses": {
-                   "201": {
-                       "description": "Created",
+                   "200": {
+                       "description": "Updated",
+                   },
+                   "400" :{
+                        "description" : "Bad Request",
                    },
                    "500": {
                        "description": "Server Error"
@@ -157,7 +172,7 @@ const swaggerOptions={
          "id": {
              "properties": {
                  "id": {
-                     "type": "integer"
+                     "type": "string"
                  }
              }
          },
@@ -210,15 +225,15 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-app.use('/api-docs',swaggerUI.serve,swaggerUI.setup(swaggerDocs));
+sapp.use('/swagger-ui',swaggerUI.serve,swaggerUI.setup(swaggerDocs));
 
-// app.get('/', (req, res) => {
-//     res.send('Just for testing!!');
-// });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname+'/client/index.html'));
+});
 
-app.post('/memes', (req, res) => {
+app.post('/memes', async function(req, res){
    const v = new Validator(req.body, {
-      name: 'required|minLength:4',
+      name: 'required|minLength:2',
       caption: 'required|minLength:4',
       url: 'required|url'
    });
@@ -234,12 +249,12 @@ app.post('/memes', (req, res) => {
          const cap=""+req.body.caption;
          const url=""+req.body.url;
          const conn=mysql.createConnection({
-            host:'sql12.freemysqlhosting.net', 
-            port:'3306',
-            user:'sql12391248',
-            password:'zMuBmBRUpq',
-            database:'sql12391248'   
-         
+            host:HOST, 
+            port:DB_PORT,
+            user:DB_USER,
+            password:DB_PASS,
+            database:DB_DATABASE,
+            multipleStatements:true
          //LOCALHOST
          //    host:'localhost',
          //    port:'3310',
@@ -247,8 +262,7 @@ app.post('/memes', (req, res) => {
          //    password:'',
          //    database:'xmeme'   
          }); 
-         conn.connect();
-         var sql1="INSERT INTO meme(Name,Caption,URL) VALUES (?)";
+         var sql1="INSERT INTO meme(Name,Caption,URL) VALUES (?); SELECT id FROM meme  WHERE name='"+name+"' and caption='"+cap+"' and url='"+url+"'";
          var values=[[name,cap,url]];
          conn.query(sql1,values,(err1,result1) => {
             if(err1){
@@ -256,41 +270,31 @@ app.post('/memes', (req, res) => {
                   console.log(err1);
                   console.log('Duplicate Entry');
                   res.sendStatus(403);
-                  res.end();
                }
                else{
                   console.log("insert "+err1);
                   res.sendStatus(500);
-                  res.end();
                }
             }
             else{
-               console.log("Record Added");
-               res.sendStatus(201);
-               res.end();
+                res.json(result1[1]);
+                res.sendStatus(200); 
             }
-         });
-         console.log(meme);
-         conn.end();
+        });
+        console.log(meme);
+        conn.end();
       }
    });
 });
 
-app.get('/memes', (req, res) => {
+app.get('/memes', async function(req, res){
    var sql="SELECT * FROM meme ORDER BY ID DESC LIMIT 100";
    const conn=mysql.createConnection({
-      host:'sql12.freemysqlhosting.net', 
-      port:'3306',
-      user:'sql12391248',
-      password:'zMuBmBRUpq',
-      database:'sql12391248'   
-   
-   //LOCALHOST
-   //    host:'localhost',
-   //    port:'3310',
-   //    user:'root',
-   //    password:'',
-   //    database:'xmeme'   
+      host:HOST, 
+      port:DB_PORT,
+      user:DB_USER,
+      password:DB_PASS,
+      database:DB_DATABASE     
    });
    conn.connect();
    conn.query(sql,(err,result) => {
@@ -305,28 +309,22 @@ app.get('/memes', (req, res) => {
          res.end();      
       }
       else{
-         console.log(result);
-         res.json(result);
-         res.end();
+         
+        console.log(result);
+        res.json(result);
+        res.end();
       }
    });
    conn.end();
 });
 
-app.get('/memes/:id',(req, res) => {
+app.get('/memes/:id',async function(req, res){
    const conn=mysql.createConnection({
-      host:'sql12.freemysqlhosting.net', 
-      port:'3306',
-      user:'sql12391248',
-      password:'zMuBmBRUpq',
-      database:'sql12391248'   
-   
-   //LOCALHOST
-   //    host:'localhost',
-   //    port:'3310',
-   //    user:'root',
-   //    password:'',
-   //    database:'xmeme'   
+    host:HOST, 
+    port:DB_PORT,
+    user:DB_USER,
+    password:DB_PASS,
+    database:DB_DATABASE
    });
    var sql="SELECT * FROM meme WHERE Id ="+req.params.id;
    conn.connect();
@@ -357,10 +355,9 @@ app.get('/memes/:id',(req, res) => {
 
 });
 
-app.patch('/memes/:id',(req, res) => {
+app.patch('/memes/:id',async function(req, res){
 
    const v = new Validator(req.body, {
-      name: 'required|minLength:4',
       caption: 'required|minLength:4',
       url: 'required|url'
    });
@@ -371,23 +368,21 @@ app.patch('/memes/:id',(req, res) => {
       }
       else{
          const conn=mysql.createConnection({
-            host:'sql12.freemysqlhosting.net', 
-            port:'3306',
-            user:'sql12391248',
-            password:'zMuBmBRUpq',
-            database:'sql12391248'   
-         
-         //LOCALHOST
-         //    host:'localhost',
-         //    port:'3310',
-         //    user:'root',
-         //    password:'',
-         //    database:'xmeme'   
+            host:HOST, 
+            port:DB_PORT,
+            user:DB_USER,
+            password:DB_PASS,
+            database:DB_DATABASE  
          });
          var sql="UPDATE meme SET CAPTION='"+req.body.caption+"', URL='"+req.body.url+"' WHERE ID="+req.params.id;
          conn.connect();
          conn.query(sql,(err,result) => {
-            if(err){
+            if(err.code=="ER_DUP_ENTRY"){
+                console.log(err);
+                console.log('Duplicate Entry');
+                res.sendStatus(403);
+            }
+            else if(err){
                res.sendStatus(404);
                return res.json({
                   errors: ['User not found']
@@ -404,11 +399,15 @@ app.patch('/memes/:id',(req, res) => {
    });
 });
 
-app.all('*', (req, res, next) => {
+app.all('*', async function(req, res, next){
    res.sendStatus(404);
    res.end();
 });
 
-app.listen((''+PORT),() =>{
+sapp.listen((''+SPORT),async function(){
+    console.log('swagger listening!!');
+});
+
+app.listen((''+PORT),async function(){
    console.log("Port Connected....");
 });
