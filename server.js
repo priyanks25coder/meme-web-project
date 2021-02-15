@@ -269,17 +269,18 @@ app.post('/memes', async function(req, res){
                if(err1.code=="ER_DUP_ENTRY"){
                   console.log(err1);
                   console.log('Duplicate Entry');
-                  res.sendStatus(403);
+                  res.status(403).send("Duplicate Entry");
                }
                else{
                   console.log("insert "+err1);
-                  res.sendStatus(500);
+                  res.status(500).send("Server Error");
                }
             }
             else{
                 res.json(result1[1]);
-                res.sendStatus(200); 
+                res.status(200); 
             }
+            res.end();
         });
         console.log(meme);
         conn.end();
@@ -372,26 +373,32 @@ app.patch('/memes/:id',async function(req, res){
             port:DB_PORT,
             user:DB_USER,
             password:DB_PASS,
-            database:DB_DATABASE  
+            database:DB_DATABASE,
+            multipleStatements:true
          });
-         var sql="UPDATE meme SET CAPTION='"+req.body.caption+"', URL='"+req.body.url+"' WHERE ID="+req.params.id;
+         var sql="SELECT ID FROM meme WHERE ID="+req.params.id+";UPDATE meme SET CAPTION='"+req.body.caption+"', URL='"+req.body.url+"' WHERE ID="+req.params.id;
          conn.connect();
          conn.query(sql,(err,result) => {
-            if(err.code=="ER_DUP_ENTRY"){
-                console.log(err);
-                console.log('Duplicate Entry');
-                res.sendStatus(403);
+            if(err){
+                if(err.code=="ER_DUP_ENTRY"){
+                    console.log('Duplicate Entry');
+                    res.status(403).send('Duplicate Entry');
+                }
+                else{
+                    console.log('Server Error');
+                    res.status(500).send('Server Error');
+                }
             }
-            else if(err){
-               res.sendStatus(404);
-               return res.json({
-                  errors: ['User not found']
-               });
+            else {
+                if(result[0].length==0){
+                    console.log('No such entry');
+                    res.status(403).send('No entry with this id');
+                }
+                else{
+                    console.log("Updated!!");
+                    res.status(200).send("Updated!!");
+                }
             }
-            console.log("Record Updated");
-            console.log(req.body.caption);
-            console.log(req.body.url);
-            res.sendStatus(200);
             res.end();
          });
          conn.end();
