@@ -1,3 +1,3 @@
 #!/bin/bash
-echo 'sleeping'
+echo "sleeping"
 sleep 30
