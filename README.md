@@ -6,3 +6,8 @@ HOW TO INSTALL THE PROJECT:
 3.	Now run sleep.sh.
 4.	Server is ready!! Now type http://localhost:8081/  in the browser to see the html page.
 5.	Now you may post memes, edit memes and see memes through this webpage.
+
+DEMO VIDEO
+
+https://user-images.githubusercontent.com/44860246/175762034-6d60240f-435d-4672-916b-8ebc31938ea9.mp4
+
